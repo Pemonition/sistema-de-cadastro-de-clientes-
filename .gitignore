@@ -1,0 +1,18 @@
+## .NET
+bin/
+obj/
+*.user
+
+## Banco de dados local (gerado em tempo de execução)
+*.db
+*.db-shm
+*.db-wal
+
+## IDE
+.vs/
+.vscode/
+*.suo
+
+## OS
+.DS_Store
+Thumbs.db
