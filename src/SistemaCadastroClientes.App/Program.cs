@@ -26,6 +26,7 @@ var providerFactory = new CepProviderFactory(new ICepProvider[]
 {
     new ViaCepProvider(httpClient),
     new BrasilApiProvider(httpClient),
+    new OpenCepProvider(httpClient),
 });
 
 IClienteRepository clienteRepository = new SqliteClienteRepository(connectionString);
