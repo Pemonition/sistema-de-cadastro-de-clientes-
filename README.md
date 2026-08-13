@@ -3,7 +3,9 @@
 Projeto prático da disciplina de C#, desenvolvido a partir da especificação
 `ARD-TI-ESP-2026-014`. Aplicação de console que cadastra clientes,
 preenche o endereço automaticamente a partir do CEP (usando um provedor
-externo escolhido em tempo de execução) e persiste tudo em SQLite.
+externo escolhido em tempo de execução) e persiste tudo em banco de
+dados — SQLite por padrão, com MySQL disponível como alternativa
+escolhida na inicialização.
 
 ## Sumário
 
@@ -18,7 +20,8 @@ externo escolhido em tempo de execução) e persiste tudo em SQLite.
 ## Tecnologias utilizadas
 
 - **.NET 10 / C#** — console app (`SistemaCadastroClientes.App`)
-- **Microsoft.Data.Sqlite** — persistência, via ADO.NET puro (sem ORM)
+- **Microsoft.Data.Sqlite** — persistência padrão, via ADO.NET puro (sem ORM)
+- **MySqlConnector** — persistência alternativa em MySQL, mesmo estilo ADO.NET
 - **System.Net.Http.Json** — consumo das APIs de CEP
 - **ViaCEP**, **BrasilAPI** e **OpenCEP** — provedores de consulta de CEP
 
@@ -35,10 +38,33 @@ opções de cadastro/consulta/troca de provedor.
 
 ## Como configurar o banco
 
-Não é preciso nenhuma configuração manual. Na primeira execução, o
-`DatabaseInitializer` cria automaticamente o arquivo `clientes.db` (SQLite)
-ao lado do executável, com a tabela `Clientes`. O script equivalente, para
-inspeção manual, está em [`database/schema.sql`](database/schema.sql).
+Ao iniciar, a aplicação pergunta qual banco usar:
+
+```
+Qual banco de dados deseja usar?
+1) SQLite (arquivo local, não exige instalação)
+2) MySQL (requer servidor MySQL configurado)
+```
+
+**SQLite (opção 1, padrão — basta apertar Enter):** nenhuma configuração
+manual é necessária. O `DatabaseInitializer` cria automaticamente o
+arquivo `clientes.db` ao lado do executável, com a tabela `Clientes`. O
+script equivalente, para inspeção manual, está em
+[`database/schema.sql`](database/schema.sql).
+
+**MySQL (opção 2):** requer um servidor MySQL já rodando (local, XAMPP,
+Docker, etc.) e um banco criado — pode usar o MySQL Workbench para isso,
+rodando o script [`database/schema-mysql.sql`](database/schema-mysql.sql)
+(ou deixar a própria aplicação criar a tabela, já que ela também roda um
+`CREATE TABLE IF NOT EXISTS` automaticamente). Depois é só informar a
+connection string quando solicitado, por exemplo:
+
+```
+Server=localhost;Port=3306;Database=cadastro_clientes;User ID=root;Password=SUASENHA;
+```
+
+Se a conexão falhar (nenhum servidor disponível, credenciais erradas,
+etc.), a aplicação avisa e continua rodando com SQLite, em vez de encerrar.
 
 ## Configuração das APIs de CEP
 
@@ -86,7 +112,7 @@ adicionar/remover um provedor de CEP, nunca exige tocar em
 | **Strategy** | `ICepProvider` + `ViaCepProvider`/`BrasilApiProvider`/`OpenCepProvider` | O algoritmo "consultar um CEP" varia por provedor, mas a assinatura é sempre a mesma. `CepConsultaService` é o *contexto* do Strategy: guarda o provedor atual e delega a chamada, permitindo trocá-lo em runtime (RN10) sem `if/else` espalhado pelo código. |
 | **Adapter** | Classes DTO privadas dentro de cada `*CepProvider` (`ViaCepResponse`, `BrasilApiResponse`, `OpenCepResponse`) | Cada API externa tem um formato de JSON diferente (nomes de campo, forma de sinalizar "não encontrado"). Cada provedor adapta sua resposta específica para o `Endereco` comum do domínio — o resto do sistema nunca vê o JSON original. |
 | **Factory** | `CepProviderFactory` | Centraliza a lista de provedores disponíveis e a resolução por índice/nome, para que o menu não precise saber como cada provedor é construído. |
-| **Repository** | `IClienteRepository` / `SqliteClienteRepository` | Isola toda a lógica de SQL. A camada de aplicação só sabe "adicionar", "existe CPF" e "listar" — nunca viu uma `SqliteConnection`. |
+| **Repository** | `IClienteRepository` / `SqliteClienteRepository` / `MySqlClienteRepository` | Isola toda a lógica de SQL. A camada de aplicação só sabe "adicionar", "existe CPF" e "listar" — nunca viu uma `SqliteConnection` ou `MySqlConnection`. Ter duas implementações concretas da mesma interface é a prova de que a troca de banco (seção 16) não exige mudar `ClienteCadastroService`. |
 | **SOLID — SRP** | Separação entre `MenuPrincipal` (I/O), `ClienteCadastroService` (regras), `SqliteClienteRepository` (persistência) e cada `*CepProvider` (integração HTTP) | Nenhuma classe mistura HTTP + regra de negócio + acesso a banco, exatamente o que a seção 14 da especificação proíbe. |
 | **SOLID — DIP** | `ClienteCadastroService` e `CepConsultaService` dependem só de interfaces de `Domain` | Permite substituir qualquer implementação concreta sem alterar quem a consome. |
 | **Composition root manual** | `Program.cs` | Em vez de um container de DI, a ligação entre interfaces e implementações concretas é feita manualmente, num único lugar — deixa explícito, para fins didáticos, quem depende de quem. |
