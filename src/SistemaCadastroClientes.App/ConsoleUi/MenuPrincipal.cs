@@ -48,12 +48,15 @@ public class MenuPrincipal
             {
                 case "1":
                     await CadastrarClienteAsync();
+                    PausarAntesDeContinuar();
                     break;
                 case "2":
                     ConsultarClientes();
+                    PausarAntesDeContinuar();
                     break;
                 case "3":
                     EscolherProvedor();
+                    PausarAntesDeContinuar();
                     break;
                 case "0":
                     continuar = false;
@@ -191,6 +194,16 @@ public class MenuPrincipal
                 $"{cliente.Endereco.Logradouro}, {cliente.Endereco.Numero} - {cliente.Endereco.Bairro}, " +
                 $"{cliente.Endereco.Cidade}/{cliente.Endereco.Estado} - CEP {cliente.Endereco.Cep}");
         }
+    }
+
+    // Sem isso, o resultado de um cadastro/consulta some da tela assim que
+    // o menu é redesenhado na próxima volta do loop — dá a impressão de
+    // que "nada aconteceu", mesmo com a mensagem certa tendo sido impressa.
+    private static void PausarAntesDeContinuar()
+    {
+        Console.WriteLine();
+        Console.Write("Pressione Enter para voltar ao menu...");
+        Console.ReadLine();
     }
 
     private static bool PerguntarSimNao(string pergunta)
